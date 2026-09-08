@@ -246,7 +246,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span>Deterioration:</span>
                   <span className={`font-semibold ${latestRecord?.prDeterioration && latestRecord.prDeterioration >= thresholds.prWWThreshold ? 'text-rose-700' : 'text-slate-800'}`}>
                     {latestRecord?.prDeterioration !== null && latestRecord?.prDeterioration !== undefined
-                      ? `-${latestRecord.prDeterioration}%`
+                      ? `${latestRecord.prDeterioration > 0 ? '+' : ''}${latestRecord.prDeterioration}%`
                       : 'N/A'}
                   </span>
                 </div>
@@ -276,7 +276,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span>Deterioration:</span>
                   <span className={`font-semibold ${latestRecord?.p3Deterioration && latestRecord.p3Deterioration >= thresholds.p3WWThreshold ? 'text-rose-700' : 'text-slate-800'}`}>
                     {latestRecord?.p3Deterioration !== null && latestRecord?.p3Deterioration !== undefined
-                      ? `-${latestRecord.p3Deterioration}%`
+                      ? `${latestRecord.p3Deterioration > 0 ? '+' : ''}${latestRecord.p3Deterioration}%`
                       : 'N/A'}
                   </span>
                 </div>
@@ -306,7 +306,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span>Deterioration:</span>
                   <span className={`font-semibold ${latestRecord?.powerDeterioration && latestRecord.powerDeterioration >= thresholds.powerWWThreshold ? 'text-rose-700' : 'text-slate-800'}`}>
                     {latestRecord?.powerDeterioration !== null && latestRecord?.powerDeterioration !== undefined
-                      ? `-${latestRecord.powerDeterioration}%`
+                      ? `${latestRecord.powerDeterioration > 0 ? '+' : ''}${latestRecord.powerDeterioration}%`
                       : 'N/A'}
                   </span>
                 </div>

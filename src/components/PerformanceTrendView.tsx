@@ -193,7 +193,8 @@ export const PerformanceTrendView: React.FC<PerformanceTrendViewProps> = ({
                     }}
                     formatter={(value: any, name: any) => {
                       if (value === null || value === undefined) return ['N/A', name];
-                      return [`${Number(value).toFixed(2)}%`, name];
+                      const num = Number(value);
+                      return [`${num > 0 ? '+' : ''}${num.toFixed(2)}%`, name];
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
@@ -327,15 +328,15 @@ export const PerformanceTrendView: React.FC<PerformanceTrendViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-md border border-slate-200">
               <div className="text-xs font-bold text-slate-800">NPHR Threshold</div>
-              <div className="text-lg font-extrabold text-slate-900 mt-1">3.0%</div>
+              <div className="text-lg font-extrabold text-slate-900 mt-1">{thresholds.nphrWWThreshold}%</div>
               <div className="text-[11px] text-slate-500 mt-0.5">
-                Early monitoring boundary at 1.7%
+                Early monitoring boundary at {thresholds.nphrEarlyMonitoring}%
               </div>
             </div>
 
             <div className="bg-white p-4 rounded-md border border-slate-200">
               <div className="text-xs font-bold text-slate-800">PR Threshold</div>
-              <div className="text-lg font-extrabold text-slate-900 mt-1">3.0%</div>
+              <div className="text-lg font-extrabold text-slate-900 mt-1">{thresholds.prWWThreshold}%</div>
               <div className="text-[11px] text-slate-500 mt-0.5">
                 Compressor pressure ratio loss
               </div>
@@ -343,7 +344,7 @@ export const PerformanceTrendView: React.FC<PerformanceTrendViewProps> = ({
 
             <div className="bg-white p-4 rounded-md border border-slate-200">
               <div className="text-xs font-bold text-slate-800">P3.0 Threshold</div>
-              <div className="text-lg font-extrabold text-slate-900 mt-1">3.0%</div>
+              <div className="text-lg font-extrabold text-slate-900 mt-1">{thresholds.p3WWThreshold}%</div>
               <div className="text-[11px] text-slate-500 mt-0.5">
                 Discharge pressure drop limit
               </div>
@@ -351,7 +352,7 @@ export const PerformanceTrendView: React.FC<PerformanceTrendViewProps> = ({
 
             <div className="bg-white p-4 rounded-md border border-slate-200">
               <div className="text-xs font-bold text-slate-800">Real Power Threshold</div>
-              <div className="text-lg font-extrabold text-slate-900 mt-1">4.0%</div>
+              <div className="text-lg font-extrabold text-slate-900 mt-1">{thresholds.powerWWThreshold}%</div>
               <div className="text-[11px] text-slate-500 mt-0.5">
                 Turbine generator output loss limit
               </div>

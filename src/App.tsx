@@ -48,7 +48,13 @@ export default function App() {
     const saved = localStorage.getItem(STORAGE_KEYS.THRESHOLDS);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_THRESHOLDS,
+          ...parsed,
+          prWWThreshold: parsed.prWWThreshold === 3.0 ? 2.5 : (parsed.prWWThreshold ?? 2.5),
+          p3WWThreshold: parsed.p3WWThreshold === 3.0 ? 2.5 : (parsed.p3WWThreshold ?? 2.5),
+        };
       } catch {
         /* fallback */
       }
@@ -121,16 +127,22 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
   }, [records]);
 
-  // Derived Analytics
+  // Derived Analytics & Dynamic Evaluation against current thresholds
+  const evaluatedRecords = useMemo(() => {
+    if (records.length === 0) return [];
+    if (!baseline.isConfigured) return records;
+    return records.map((r) => evaluateOperationalRecord(r, r.id, baseline, thresholds));
+  }, [records, baseline, thresholds]);
+
   const derivedEvents = useMemo(() => {
-    return deriveWaterWashEvents(records);
-  }, [records]);
+    return deriveWaterWashEvents(evaluatedRecords);
+  }, [evaluatedRecords]);
 
   const latestRecord = useMemo(() => {
-    if (records.length === 0) return null;
-    const sorted = [...records].sort((a, b) => b.timestamp - a.timestamp);
+    if (evaluatedRecords.length === 0) return null;
+    const sorted = [...evaluatedRecords].sort((a, b) => b.timestamp - a.timestamp);
     return sorted[0];
-  }, [records]);
+  }, [evaluatedRecords]);
 
   // Record Submission Handler
   const handleRecordSubmitted = async (
@@ -263,7 +275,7 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         latestRecord={latestRecord ?? undefined}
-        recordsCount={records.length}
+        recordsCount={evaluatedRecords.length}
         onClearData={handleClearData}
         onLoadSampleData={handleLoadSampleData}
         onOpenImport={() => setIsImportModalOpen(true)}
@@ -278,7 +290,7 @@ export default function App() {
             baseline={baseline}
             thresholds={thresholds}
             events={derivedEvents}
-            recordsCount={records.length}
+            recordsCount={evaluatedRecords.length}
             onNavigate={setActiveTab}
             onOpenImport={() => setIsImportModalOpen(true)}
           />
@@ -289,7 +301,7 @@ export default function App() {
             onRecordSubmitted={handleRecordSubmitted}
             baseline={baseline}
             thresholds={thresholds}
-            records={records}
+            records={evaluatedRecords}
             onNavigate={setActiveTab}
             onToggleWaterWash={handleToggleWaterWashRecord}
             onDeleteRecord={handleDeleteRecord}
@@ -298,7 +310,7 @@ export default function App() {
 
         {activeTab === 'trend' && (
           <PerformanceTrendView
-            records={records}
+            records={evaluatedRecords}
             thresholds={thresholds}
           />
         )}
@@ -327,7 +339,7 @@ export default function App() {
             Gas Turbine Compressor Water Washing Monitoring • Decision Logic: 3-out-of-4 Parameter Rule
           </span>
           <div className="flex items-center gap-3 text-slate-400 text-[11px]">
-            <span>Thresholds: NPHR ≥ 3% | PR ≥ 3% | P3.0 ≥ 3% | Real Power ≥ 4%</span>
+            <span>Thresholds: NPHR ≥ 3% | PR ≥ 2.5% | P3.0 ≥ 2.5% | Real Power ≥ 4%</span>
             <span>•</span>
             <span>Early Monitoring: NPHR 1.7%</span>
           </div>

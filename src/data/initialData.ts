@@ -7,8 +7,8 @@ import {
 
 export const DEFAULT_THRESHOLDS: ThresholdConfig = {
   nphrWWThreshold: 3.0, // Historical-based WW threshold (3%)
-  prWWThreshold: 3.0,    // Historical-based WW threshold (3%)
-  p3WWThreshold: 3.0,    // Historical-based WW threshold (3%)
+  prWWThreshold: 2.5,    // Historical-based WW threshold (2.5%)
+  p3WWThreshold: 2.5,    // Historical-based WW threshold (2.5%)
   powerWWThreshold: 4.0, // Historical-based WW threshold (4%)
   nphrEarlyMonitoring: 1.7, // Early monitoring boundary (1.7%)
 };
