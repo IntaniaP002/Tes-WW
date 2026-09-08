@@ -234,6 +234,28 @@ export default function App() {
     setActiveTab('dashboard');
   };
 
+  // Toggle Water Wash status of an existing record
+  const handleToggleWaterWashRecord = (recordId: string) => {
+    setRecords((prev) =>
+      prev.map((r) => {
+        if (r.id !== recordId) return r;
+        const nextWW = !r.isWaterWashEvent;
+        return {
+          ...r,
+          isWaterWashEvent: nextWW,
+          notes: nextWW ? 'Water Wash Event' : undefined,
+        };
+      })
+    );
+  };
+
+  // Delete a specific record
+  const handleDeleteRecord = (recordId: string) => {
+    if (window.confirm('Are you sure you want to delete this operational reading?')) {
+      setRecords((prev) => prev.filter((r) => r.id !== recordId));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
       {/* Top Application Header */}
@@ -269,6 +291,8 @@ export default function App() {
             thresholds={thresholds}
             records={records}
             onNavigate={setActiveTab}
+            onToggleWaterWash={handleToggleWaterWashRecord}
+            onDeleteRecord={handleDeleteRecord}
           />
         )}
 

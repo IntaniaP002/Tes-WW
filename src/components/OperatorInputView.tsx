@@ -6,6 +6,9 @@ import {
   Download,
   AlertCircle,
   Save,
+  Trash2,
+  Droplets,
+  Check,
 } from 'lucide-react';
 import {
   BaselineConfig,
@@ -22,6 +25,8 @@ interface OperatorInputViewProps {
   thresholds: ThresholdConfig;
   records: OperationalRecord[];
   onNavigate: (tab: 'dashboard' | 'input' | 'trend') => void;
+  onToggleWaterWash?: (recordId: string) => void;
+  onDeleteRecord?: (recordId: string) => void;
 }
 
 export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
@@ -29,6 +34,8 @@ export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
   baseline,
   records,
   onNavigate,
+  onToggleWaterWash,
+  onDeleteRecord,
 }) => {
   const today = new Date().toISOString().slice(0, 10);
   const nowTime = new Date().toTimeString().slice(0, 5);
@@ -407,18 +414,15 @@ export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
                   <th className="py-3 px-4">PR</th>
                   <th className="py-3 px-4">Real Power (MW)</th>
                   <th className="py-3 px-4">NPHR (kcal/kWh)</th>
+                  <th className="py-3 px-4 text-center">WW Status</th>
+                  {onDeleteRecord && <th className="py-3 px-2 text-center">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {[...records].reverse().map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={r.id} className={`hover:bg-slate-50 transition-colors ${r.isWaterWashEvent ? 'bg-sky-50/40' : ''}`}>
                     <td className="py-2.5 px-4 font-medium text-slate-900 whitespace-nowrap">
                       {r.date}
-                      {r.isWaterWashEvent && (
-                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-sky-100 text-sky-800 rounded">
-                          WW
-                        </span>
-                      )}
                     </td>
                     <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{r.time}</td>
                     <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.T1_7.toFixed(1)}</td>
@@ -429,6 +433,47 @@ export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
                     </td>
                     <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.realPower.toFixed(2)}</td>
                     <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.nphr.toLocaleString()}</td>
+                    <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                      {onToggleWaterWash ? (
+                        <button
+                          type="button"
+                          onClick={() => onToggleWaterWash(r.id)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors shadow-2xs ${
+                            r.isWaterWashEvent
+                              ? 'bg-sky-600 text-white hover:bg-sky-700'
+                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-300'
+                          }`}
+                          title="Click to toggle Water Wash event status"
+                        >
+                          {r.isWaterWashEvent ? (
+                            <>
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              <span>WW EVENT</span>
+                            </>
+                          ) : (
+                            <span>+ Tag WW</span>
+                          )}
+                        </button>
+                      ) : (
+                        r.isWaterWashEvent && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-sky-100 text-sky-800 rounded">
+                            WW
+                          </span>
+                        )
+                      )}
+                    </td>
+                    {onDeleteRecord && (
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => onDeleteRecord(r.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                          title="Delete this reading"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
