@@ -1,0 +1,409 @@
+import React, { useId, useMemo, useState } from 'react';
+import {
+  Calendar,
+  Clock,
+  CheckCircle2,
+  Download,
+  AlertCircle,
+  Save,
+} from 'lucide-react';
+import {
+  BaselineConfig,
+  OperationalInput,
+  OperationalRecord,
+  ThresholdConfig,
+} from '../types';
+import { calculatePressureRatio } from '../utils/calculations';
+import { exportOperationalRecordsCSV } from '../utils/export';
+
+interface OperatorInputViewProps {
+  onRecordSubmitted: (record: OperationalInput) => Promise<{ success: boolean; message: string }>;
+  baseline: BaselineConfig;
+  thresholds: ThresholdConfig;
+  records: OperationalRecord[];
+  onNavigate: (tab: 'dashboard' | 'input' | 'trend') => void;
+}
+
+export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
+  onRecordSubmitted,
+  records,
+  onNavigate,
+}) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const nowTime = new Date().toTimeString().slice(0, 5);
+
+  const [date, setDate] = useState(today);
+  const [time, setTime] = useState(nowTime);
+  const [T1_7, setT1_7] = useState<string>('');
+  const [P1_7, setP1_7] = useState<string>('');
+  const [P3_0, setP3_0] = useState<string>('');
+  const [realPower, setRealPower] = useState<string>('');
+  const [nphr, setNphr] = useState<string>('');
+  const [isWaterWashEvent, setIsWaterWashEvent] = useState<boolean>(false);
+  const [notes, setNotes] = useState<string>('');
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Automatic calculation of PR = P3.0 / P1.7
+  const calculatedPR = useMemo(() => {
+    const p3 = parseFloat(P3_0);
+    const p1 = parseFloat(P1_7);
+    if (!isNaN(p3) && !isNaN(p1) && p1 > 0 && p3 > 0) {
+      return calculatePressureRatio(p3, p1);
+    }
+    return null;
+  }, [P3_0, P1_7]);
+
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+
+    if (!date) errs.date = 'Date is required';
+    if (!time) errs.time = 'Time is required';
+
+    const t = parseFloat(T1_7);
+    if (isNaN(t) || t < -40 || t > 160) {
+      errs.T1_7 = 'T1.7 must be between -40 and 160 °F';
+    }
+
+    const p1 = parseFloat(P1_7);
+    if (isNaN(p1) || p1 <= 0 || p1 > 30) {
+      errs.P1_7 = 'P1.7 must be between 1 and 30 PSIA';
+    }
+
+    const p3 = parseFloat(P3_0);
+    if (isNaN(p3) || p3 <= 0 || p3 > 500) {
+      errs.P3_0 = 'P3.0 must be between 10 and 500 PSIA';
+    }
+
+    const pw = parseFloat(realPower);
+    if (isNaN(pw) || pw <= 0 || pw > 1000) {
+      errs.realPower = 'Real Power must be between 1 and 1000 MW';
+    }
+
+    const hr = parseFloat(nphr);
+    if (isNaN(hr) || hr <= 500 || hr > 10000) {
+      errs.nphr = 'NPHR must be between 500 and 10000 kcal/kWh';
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+
+    const inputData: OperationalInput = {
+      date,
+      time,
+      T1_7: parseFloat(T1_7),
+      P1_7: parseFloat(P1_7),
+      P3_0: parseFloat(P3_0),
+      realPower: parseFloat(realPower),
+      nphr: parseFloat(nphr),
+      isWaterWashEvent,
+      notes: notes.trim() || undefined,
+    };
+
+    try {
+      const res = await onRecordSubmitted(inputData);
+      if (res.success) {
+        setSubmitMessage({ type: 'success', text: 'Data successfully recorded.' });
+        // Reset reading inputs
+        setT1_7('');
+        setP1_7('');
+        setP3_0('');
+        setRealPower('');
+        setNphr('');
+        setNotes('');
+        setIsWaterWashEvent(false);
+        setErrors({});
+      } else {
+        setSubmitMessage({ type: 'error', text: res.message || 'Failed to save data.' });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Submission failed.';
+      setSubmitMessage({ type: 'error', text: msg });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* 1. TOP SECTION: OPERATOR INPUT FORM */}
+      <section className="bg-white rounded-md border border-slate-200 p-6 shadow-xs">
+        <div className="border-b border-slate-200 pb-3 mb-5">
+          <h2 className="text-base font-bold text-slate-900 tracking-tight">Input Data</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Enter verified operational readings. Pressure Ratio (PR = P3.0 / P1.7) is calculated automatically.
+          </p>
+        </div>
+
+        {submitMessage && (
+          <div
+            className={`p-3.5 rounded-md mb-5 text-xs font-medium flex items-center justify-between ${
+              submitMessage.type === 'success'
+                ? 'bg-emerald-50 border border-emerald-300 text-emerald-900'
+                : 'bg-rose-50 border border-rose-300 text-rose-900'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {submitMessage.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+              <span>{submitMessage.text}</span>
+            </div>
+            {submitMessage.type === 'success' && (
+              <button
+                type="button"
+                onClick={() => onNavigate('dashboard')}
+                className="text-xs font-semibold text-emerald-800 underline hover:text-emerald-950"
+              >
+                View Dashboard
+              </button>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Row 1: Date & Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="input-date" className="block text-xs font-semibold text-slate-700 mb-1">
+                Date
+              </label>
+              <input
+                id="input-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white"
+              />
+              {errors.date && <p className="text-[11px] text-rose-600 mt-1">{errors.date}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="input-time" className="block text-xs font-semibold text-slate-700 mb-1">
+                Time
+              </label>
+              <input
+                id="input-time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white"
+              />
+              {errors.time && <p className="text-[11px] text-rose-600 mt-1">{errors.time}</p>}
+            </div>
+          </div>
+
+          {/* Row 2: Compressor Measurements */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+            <div>
+              <label htmlFor="input-t17" className="block text-xs font-semibold text-slate-700 mb-1">
+                T1.7 (°F)
+              </label>
+              <input
+                id="input-t17"
+                type="number"
+                step="0.1"
+                value={T1_7}
+                onChange={(e) => setT1_7(e.target.value)}
+                placeholder="e.g. 70.2"
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white"
+              />
+              {errors.T1_7 && <p className="text-[11px] text-rose-600 mt-1">{errors.T1_7}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="input-p17" className="block text-xs font-semibold text-slate-700 mb-1">
+                P1.7 (PSIA)
+              </label>
+              <input
+                id="input-p17"
+                type="number"
+                step="0.01"
+                value={P1_7}
+                onChange={(e) => setP1_7(e.target.value)}
+                placeholder="e.g. 14.65"
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white"
+              />
+              {errors.P1_7 && <p className="text-[11px] text-rose-600 mt-1">{errors.P1_7}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="input-p30" className="block text-xs font-semibold text-slate-700 mb-1">
+                P3.0 (PSIA)
+              </label>
+              <input
+                id="input-p30"
+                type="number"
+                step="0.1"
+                value={P3_0}
+                onChange={(e) => setP3_0(e.target.value)}
+                placeholder="e.g. 245.0"
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white"
+              />
+              {errors.P3_0 && <p className="text-[11px] text-rose-600 mt-1">{errors.P3_0}</p>}
+            </div>
+          </div>
+
+          {/* Automatic PR Banner */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded flex items-center justify-between text-xs">
+            <span className="text-slate-600">
+              Calculated Pressure Ratio (PR = P3.0 / P1.7):
+            </span>
+            <span className="font-mono font-bold text-slate-900 text-sm">
+              {calculatedPR !== null ? calculatedPR.toFixed(4) : '— (Auto-calculated)'}
+            </span>
+          </div>
+
+          {/* Row 3: Output and Heat Rate */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="input-power" className="block text-xs font-semibold text-slate-700 mb-1">
+                Real Power (MW)
+              </label>
+              <input
+                id="input-power"
+                type="number"
+                step="0.1"
+                value={realPower}
+                onChange={(e) => setRealPower(e.target.value)}
+                placeholder="e.g. 154.5"
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white"
+              />
+              {errors.realPower && <p className="text-[11px] text-rose-600 mt-1">{errors.realPower}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="input-nphr" className="block text-xs font-semibold text-slate-700 mb-1">
+                NPHR (kcal/kWh)
+              </label>
+              <input
+                id="input-nphr"
+                type="number"
+                step="1"
+                value={nphr}
+                onChange={(e) => setNphr(e.target.value)}
+                placeholder="e.g. 2435"
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white"
+              />
+              {errors.nphr && <p className="text-[11px] text-rose-600 mt-1">{errors.nphr}</p>}
+            </div>
+          </div>
+
+          {/* Optional Water Wash tag */}
+          <div className="pt-1 flex items-center gap-2">
+            <input
+              id="input-is-ww"
+              type="checkbox"
+              checked={isWaterWashEvent}
+              onChange={(e) => setIsWaterWashEvent(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            />
+            <label htmlFor="input-is-ww" className="text-xs font-medium text-slate-700 cursor-pointer">
+              Water Wash performed on this date
+            </label>
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-2 flex justify-end">
+            <button
+              id="btn-submit-data"
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-slate-900 rounded hover:bg-slate-800 disabled:opacity-50 transition-colors shadow-xs"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{isSubmitting ? 'Recording...' : 'Submit Reading'}</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* 2. DIRECTLY BELOW: INPUT HISTORY */}
+      <section className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Input History</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Chronological log of verified operational readings
+            </p>
+          </div>
+          <button
+            id="btn-download-history"
+            type="button"
+            onClick={() => exportOperationalRecordsCSV(records)}
+            disabled={records.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Download Data</span>
+          </button>
+        </div>
+
+        {records.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-500">
+            No input records recorded yet. Submit your first reading above.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                <tr>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Time</th>
+                  <th className="py-3 px-4">T1.7 (°F)</th>
+                  <th className="py-3 px-4">P1.7 (PSIA)</th>
+                  <th className="py-3 px-4">P3.0 (PSIA)</th>
+                  <th className="py-3 px-4">PR</th>
+                  <th className="py-3 px-4">Real Power (MW)</th>
+                  <th className="py-3 px-4">NPHR (kcal/kWh)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[...records].reverse().map((r) => (
+                  <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-2.5 px-4 font-medium text-slate-900 whitespace-nowrap">
+                      {r.date}
+                      {r.isWaterWashEvent && (
+                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-sky-100 text-sky-800 rounded">
+                          WW
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4 text-slate-600 whitespace-nowrap">{r.time}</td>
+                    <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.T1_7.toFixed(1)}</td>
+                    <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.P1_7.toFixed(2)}</td>
+                    <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.P3_0.toFixed(2)}</td>
+                    <td className="py-2.5 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                      {r.pr.toFixed(4)}
+                    </td>
+                    <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.realPower.toFixed(2)}</td>
+                    <td className="py-2.5 px-4 text-slate-800 whitespace-nowrap">{r.nphr.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};
