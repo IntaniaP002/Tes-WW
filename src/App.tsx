@@ -377,7 +377,7 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white py-3.5 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
-            Gas Turbine Compressor Water Washing Monitoring • Decision Logic: 3-out-of-4 Parameter Rule
+            Water Washing Monitoring • Decision Logic: 3-out-of-4 Parameter Rule
           </span>
           <div className="flex items-center gap-3 text-slate-400 text-[11px]">
             <span>Thresholds: NPHR ≥ 3% | PR ≥ 2.5% | P3.0 ≥ 2.5% | Real Power ≥ 4%</span>

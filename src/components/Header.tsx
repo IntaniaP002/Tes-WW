@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">
-              Gas Turbine Compressor Water Washing Monitoring
+              Water Washing Monitoring
             </h1>
             <p className="text-xs text-slate-500">
               Condition-based monitoring & automated Water Washing recommendation
