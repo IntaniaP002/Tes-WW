@@ -6,6 +6,9 @@ import {
   HelpCircle,
   ChevronRight,
   Info,
+  Compass,
+  Check,
+  Sliders,
 } from 'lucide-react';
 import {
   BaselineConfig,
@@ -23,6 +26,7 @@ interface DashboardViewProps {
   recordsCount: number;
   onNavigate: (tab: 'dashboard' | 'input' | 'trend') => void;
   onOpenImport?: () => void;
+  onOpenBaselineConfig?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -33,11 +37,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   recordsCount,
   onNavigate,
   onOpenImport,
+  onOpenBaselineConfig,
 }) => {
   const [selectedEvent, setSelectedEvent] = useState<WaterWashEvent | null>(null);
 
   const hasData = Boolean(latestRecord);
-  const hasBaseline = baseline.isConfigured;
+  const hasBaseline = Boolean(baseline?.isConfigured);
 
   // Compute status label for each parameter
   const getParamStatus = (
@@ -197,6 +202,55 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
+        {/* Active Baseline Reference Banner */}
+        <div className="bg-slate-50 border border-slate-200 rounded-md p-3.5 text-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded bg-slate-900 text-sky-400 flex items-center justify-center shrink-0 shadow-2xs">
+              <Compass className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900 text-xs">Active Baseline Reference:</span>
+                {hasBaseline ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <Check className="w-2.5 h-2.5 stroke-[3]" /> Active
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-300">
+                    Not Set
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5">
+                {hasBaseline
+                  ? (baseline.referenceDescription || (baseline.date ? `Calibrated on ${baseline.date} ${baseline.time || ''}` : 'Operational Baseline Reference'))
+                  : 'No baseline set. Deteriorations are calculated relative to this reference point.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {hasBaseline && (
+              <div className="flex items-center gap-3 text-[11px] bg-white px-3 py-1.5 rounded border border-slate-200">
+                <span>Power: <strong className="text-slate-900">{baseline.realPower?.toFixed(2)} MW</strong></span>
+                <span>PR: <strong className="text-slate-900 font-mono">{baseline.PR?.toFixed(4)}</strong></span>
+                <span>P3.0: <strong className="text-slate-900">{baseline.P3_0?.toFixed(2)} PSIA</strong></span>
+                <span>NPHR: <strong className="text-slate-900">{baseline.nphr?.toLocaleString()} kcal</strong></span>
+              </div>
+            )}
+            {onOpenBaselineConfig && (
+              <button
+                type="button"
+                onClick={onOpenBaselineConfig}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded hover:bg-slate-100 transition-colors shadow-2xs shrink-0"
+              >
+                <Sliders className="w-3.5 h-3.5 text-slate-500" />
+                <span>Change Baseline</span>
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* 4 Main Performance Parameters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
           {/* NPHR */}
@@ -213,12 +267,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="text-xs font-normal text-slate-500">kcal/kWh</span>
               </div>
               <div className="mt-2 text-xs space-y-1 text-slate-600 border-t border-slate-100 pt-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-baseline">
                   <span>Deterioration:</span>
                   <span className={`font-semibold ${latestRecord?.nphrDeterioration && latestRecord.nphrDeterioration >= thresholds.nphrWWThreshold ? 'text-rose-700' : 'text-slate-800'}`}>
                     {latestRecord?.nphrDeterioration !== null && latestRecord?.nphrDeterioration !== undefined
                       ? `${latestRecord.nphrDeterioration > 0 ? '+' : ''}${latestRecord.nphrDeterioration}%`
                       : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline text-[11px] text-slate-500">
+                  <span>Delta vs Baseline:</span>
+                  <span className="font-mono font-medium text-slate-700">
+                    {latestRecord?.nphrDelta !== null && latestRecord?.nphrDelta !== undefined
+                      ? `${latestRecord.nphrDelta > 0 ? '+' : ''}${latestRecord.nphrDelta.toFixed(1)} kcal/kWh`
+                      : (hasBaseline && baseline.nphr && latestRecord ? `${(latestRecord.nphr - baseline.nphr) > 0 ? '+' : ''}${(latestRecord.nphr - baseline.nphr).toFixed(1)} kcal/kWh` : '—')}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-500 text-[11px]">
@@ -242,12 +304,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {latestRecord ? latestRecord.pr.toFixed(4) : '—'}
               </div>
               <div className="mt-2 text-xs space-y-1 text-slate-600 border-t border-slate-100 pt-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-baseline">
                   <span>Deterioration:</span>
                   <span className={`font-semibold ${latestRecord?.prDeterioration && latestRecord.prDeterioration >= thresholds.prWWThreshold ? 'text-rose-700' : 'text-slate-800'}`}>
                     {latestRecord?.prDeterioration !== null && latestRecord?.prDeterioration !== undefined
                       ? `${latestRecord.prDeterioration > 0 ? '+' : ''}${latestRecord.prDeterioration}%`
                       : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline text-[11px] text-slate-500">
+                  <span>Delta vs Baseline:</span>
+                  <span className="font-mono font-medium text-slate-700">
+                    {latestRecord?.prDelta !== null && latestRecord?.prDelta !== undefined
+                      ? `${latestRecord.prDelta > 0 ? '+' : ''}${latestRecord.prDelta.toFixed(4)}`
+                      : (hasBaseline && baseline.PR && latestRecord ? `${(latestRecord.pr - baseline.PR) > 0 ? '+' : ''}${(latestRecord.pr - baseline.PR).toFixed(4)}` : '—')}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-500 text-[11px]">
@@ -272,12 +342,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="text-xs font-normal text-slate-500">PSIA</span>
               </div>
               <div className="mt-2 text-xs space-y-1 text-slate-600 border-t border-slate-100 pt-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-baseline">
                   <span>Deterioration:</span>
                   <span className={`font-semibold ${latestRecord?.p3Deterioration && latestRecord.p3Deterioration >= thresholds.p3WWThreshold ? 'text-rose-700' : 'text-slate-800'}`}>
                     {latestRecord?.p3Deterioration !== null && latestRecord?.p3Deterioration !== undefined
                       ? `${latestRecord.p3Deterioration > 0 ? '+' : ''}${latestRecord.p3Deterioration}%`
                       : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline text-[11px] text-slate-500">
+                  <span>Delta vs Baseline:</span>
+                  <span className="font-mono font-medium text-slate-700">
+                    {latestRecord?.p3Delta !== null && latestRecord?.p3Delta !== undefined
+                      ? `${latestRecord.p3Delta > 0 ? '+' : ''}${latestRecord.p3Delta.toFixed(2)} PSIA`
+                      : (hasBaseline && baseline.P3_0 && latestRecord ? `${(latestRecord.P3_0 - baseline.P3_0) > 0 ? '+' : ''}${(latestRecord.P3_0 - baseline.P3_0).toFixed(2)} PSIA` : '—')}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-500 text-[11px]">
@@ -302,12 +380,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="text-xs font-normal text-slate-500">MW</span>
               </div>
               <div className="mt-2 text-xs space-y-1 text-slate-600 border-t border-slate-100 pt-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-baseline">
                   <span>Deterioration:</span>
                   <span className={`font-semibold ${latestRecord?.powerDeterioration && latestRecord.powerDeterioration >= thresholds.powerWWThreshold ? 'text-rose-700' : 'text-slate-800'}`}>
                     {latestRecord?.powerDeterioration !== null && latestRecord?.powerDeterioration !== undefined
                       ? `${latestRecord.powerDeterioration > 0 ? '+' : ''}${latestRecord.powerDeterioration}%`
                       : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline text-[11px] text-slate-500">
+                  <span>Delta vs Baseline:</span>
+                  <span className="font-mono font-medium text-slate-700">
+                    {latestRecord?.powerDelta !== null && latestRecord?.powerDelta !== undefined
+                      ? `${latestRecord.powerDelta > 0 ? '+' : ''}${latestRecord.powerDelta.toFixed(2)} MW`
+                      : (hasBaseline && baseline.realPower && latestRecord ? `${(latestRecord.realPower - baseline.realPower) > 0 ? '+' : ''}${(latestRecord.realPower - baseline.realPower).toFixed(2)} MW` : '—')}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-500 text-[11px]">

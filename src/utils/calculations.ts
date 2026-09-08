@@ -111,6 +111,27 @@ export function evaluateOperationalRecord(
     ? calculateDeteriorationPercent(input.realPower, baseline.realPower, 'lower_is_worse')
     : null;
 
+  // Actual physical deltas vs baseline (Current - Baseline)
+  const nphrDelta =
+    hasBaseline && baseline.nphr !== null && baseline.nphr !== undefined
+      ? Number((input.nphr - baseline.nphr).toFixed(1))
+      : null;
+
+  const prDelta =
+    hasBaseline && baseline.PR !== null && baseline.PR !== undefined
+      ? Number((pr - baseline.PR).toFixed(4))
+      : null;
+
+  const p3Delta =
+    hasBaseline && baseline.P3_0 !== null && baseline.P3_0 !== undefined
+      ? Number((input.P3_0 - baseline.P3_0).toFixed(2))
+      : null;
+
+  const powerDelta =
+    hasBaseline && baseline.realPower !== null && baseline.realPower !== undefined
+      ? Number((input.realPower - baseline.realPower).toFixed(2))
+      : null;
+
   // Evaluate threshold conditions
   const nphrThresholdReached =
     nphrDeterioration !== null ? nphrDeterioration >= thresholds.nphrWWThreshold : null;
@@ -175,6 +196,10 @@ export function evaluateOperationalRecord(
     prDeterioration,
     p3Deterioration,
     powerDeterioration,
+    nphrDelta,
+    prDelta,
+    p3Delta,
+    powerDelta,
     nphrThresholdReached,
     nphrEarlyMonitoringReached,
     prThresholdReached,

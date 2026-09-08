@@ -5,6 +5,7 @@ import { OperatorInputView } from './components/OperatorInputView';
 import { PerformanceTrendView } from './components/PerformanceTrendView';
 import { DatasetImportModal } from './components/DatasetImportModal';
 import { SpreadsheetConfigModal } from './components/SpreadsheetConfigModal';
+import { BaselineConfigModal } from './components/BaselineConfigModal';
 import {
   ActiveNavTab,
   BaselineConfig,
@@ -105,6 +106,7 @@ export default function App() {
   // Modals State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isSpreadsheetModalOpen, setIsSpreadsheetModalOpen] = useState(false);
+  const [isBaselineModalOpen, setIsBaselineModalOpen] = useState(false);
 
   // Sync to localStorage
   useEffect(() => {
@@ -268,6 +270,30 @@ export default function App() {
     }
   };
 
+  // Set an existing operational record as the active baseline
+  const handleSetBaselineRecord = (record: OperationalRecord) => {
+    const p1 = record.P1_7;
+    const p3 = record.P3_0;
+    const pr = p1 > 0 ? Number((p3 / p1).toFixed(4)) : null;
+
+    const newBaseline: BaselineConfig = {
+      isConfigured: true,
+      sourceRecordId: record.id,
+      date: record.date,
+      time: record.time,
+      T1_7: record.T1_7,
+      P1_7: p1,
+      P3_0: p3,
+      PR: pr,
+      realPower: record.realPower,
+      nphr: record.nphr,
+      referenceDescription: `Operational baseline established from record on ${record.date} ${record.time}`,
+      setAt: new Date().toISOString(),
+    };
+
+    setBaseline(newBaseline);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
       {/* Top Application Header */}
@@ -280,6 +306,7 @@ export default function App() {
         onLoadSampleData={handleLoadSampleData}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenSpreadsheetConfig={() => setIsSpreadsheetModalOpen(true)}
+        onOpenBaselineConfig={() => setIsBaselineModalOpen(true)}
       />
 
       {/* Main Content Workspace */}
@@ -293,6 +320,7 @@ export default function App() {
             recordsCount={evaluatedRecords.length}
             onNavigate={setActiveTab}
             onOpenImport={() => setIsImportModalOpen(true)}
+            onOpenBaselineConfig={() => setIsBaselineModalOpen(true)}
           />
         )}
 
@@ -305,6 +333,8 @@ export default function App() {
             onNavigate={setActiveTab}
             onToggleWaterWash={handleToggleWaterWashRecord}
             onDeleteRecord={handleDeleteRecord}
+            onSetBaselineRecord={handleSetBaselineRecord}
+            onOpenBaselineConfig={() => setIsBaselineModalOpen(true)}
           />
         )}
 
@@ -322,6 +352,17 @@ export default function App() {
         onClose={() => setIsSpreadsheetModalOpen(false)}
         config={spreadsheetConfig}
         onSaveConfig={setSpreadsheetConfig}
+      />
+
+      {/* Baseline Reference Calibration Modal */}
+      <BaselineConfigModal
+        isOpen={isBaselineModalOpen}
+        onClose={() => setIsBaselineModalOpen(false)}
+        baseline={baseline}
+        currentBaseline={baseline}
+        records={evaluatedRecords}
+        onUpdateBaseline={setBaseline}
+        onSaveBaseline={setBaseline}
       />
 
       {/* Dataset Import Modal */}

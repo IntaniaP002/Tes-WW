@@ -7,6 +7,7 @@ import {
   Upload,
   Trash2,
   Sparkles,
+  Compass,
 } from 'lucide-react';
 import { ActiveNavTab, OperationalRecord, OverallWaterWashStatus } from '../types';
 
@@ -16,6 +17,7 @@ interface HeaderProps {
   latestRecord?: OperationalRecord;
   onOpenImport: () => void;
   onOpenSpreadsheetConfig?: () => void;
+  onOpenBaselineConfig?: () => void;
   recordsCount: number;
   onClearData: () => void;
   onLoadSampleData: () => void;
@@ -27,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   latestRecord,
   onOpenImport,
   onOpenSpreadsheetConfig,
+  onOpenBaselineConfig,
   recordsCount,
   onClearData,
   onLoadSampleData,
@@ -106,6 +109,18 @@ export const Header: React.FC<HeaderProps> = ({
           {getStatusBadge(latestRecord?.overallStatus)}
 
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+            {onOpenBaselineConfig && (
+              <button
+                type="button"
+                onClick={onOpenBaselineConfig}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shadow-xs"
+                title="View and Change Baseline Calibration Reference"
+              >
+                <Compass className="w-3.5 h-3.5 text-sky-600" />
+                <span className="hidden sm:inline">Baseline</span>
+              </button>
+            )}
+
             {onOpenSpreadsheetConfig && (
               <button
                 type="button"

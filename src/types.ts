@@ -45,6 +45,12 @@ export interface OperationalRecord extends OperationalInput {
   p3Deterioration: number | null;
   powerDeterioration: number | null;
 
+  // Actual physical deltas vs baseline (Current - Baseline)
+  nphrDelta?: number | null; // kcal/kWh (positive = higher heat rate)
+  prDelta?: number | null; // dimensionless (negative = loss of PR)
+  p3Delta?: number | null; // PSIA (negative = drop in discharge pressure)
+  powerDelta?: number | null; // MW (negative = loss of generator power)
+
   // Threshold evaluations
   nphrThresholdReached: boolean | null;
   nphrEarlyMonitoringReached: boolean | null;
@@ -81,6 +87,9 @@ export interface BaselineConfig {
   nphr: number | null; // kcal/kWh
   referenceDescription?: string;
   setAt?: string;
+  sourceRecordId?: string; // ID of the record currently serving as baseline
+  date?: string; // Date of the baseline record
+  time?: string; // Time of the baseline record
 }
 
 export interface WaterWashEvent {
