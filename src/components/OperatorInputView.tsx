@@ -17,7 +17,7 @@ import { calculatePressureRatio } from '../utils/calculations';
 import { exportOperationalRecordsCSV } from '../utils/export';
 
 interface OperatorInputViewProps {
-  onRecordSubmitted: (record: OperationalInput) => Promise<{ success: boolean; message: string }>;
+  onRecordSubmitted: (record: OperationalInput, setAsBaseline?: boolean) => Promise<{ success: boolean; message: string }>;
   baseline: BaselineConfig;
   thresholds: ThresholdConfig;
   records: OperationalRecord[];
@@ -26,6 +26,7 @@ interface OperatorInputViewProps {
 
 export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
   onRecordSubmitted,
+  baseline,
   records,
   onNavigate,
 }) => {
@@ -40,6 +41,7 @@ export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
   const [realPower, setRealPower] = useState<string>('');
   const [nphr, setNphr] = useState<string>('');
   const [isWaterWashEvent, setIsWaterWashEvent] = useState<boolean>(false);
+  const [setAsBaseline, setSetAsBaseline] = useState<boolean>(!baseline.isConfigured);
   const [notes, setNotes] = useState<string>('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -111,9 +113,14 @@ export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
     };
 
     try {
-      const res = await onRecordSubmitted(inputData);
+      const res = await onRecordSubmitted(inputData, setAsBaseline);
       if (res.success) {
-        setSubmitMessage({ type: 'success', text: 'Data successfully recorded.' });
+        setSubmitMessage({
+          type: 'success',
+          text: setAsBaseline
+            ? 'Data recorded and successfully calibrated as baseline reference.'
+            : 'Data successfully recorded.',
+        });
         // Reset reading inputs
         setT1_7('');
         setP1_7('');
@@ -122,6 +129,7 @@ export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
         setNphr('');
         setNotes('');
         setIsWaterWashEvent(false);
+        setSetAsBaseline(false);
         setErrors({});
       } else {
         setSubmitMessage({ type: 'error', text: res.message || 'Failed to save data.' });
@@ -309,17 +317,41 @@ export const OperatorInputView: React.FC<OperatorInputViewProps> = ({
           </div>
 
           {/* Optional Water Wash tag */}
-          <div className="pt-1 flex items-center gap-2">
-            <input
-              id="input-is-ww"
-              type="checkbox"
-              checked={isWaterWashEvent}
-              onChange={(e) => setIsWaterWashEvent(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-            />
-            <label htmlFor="input-is-ww" className="text-xs font-medium text-slate-700 cursor-pointer">
-              Water Wash performed on this date
-            </label>
+          <div className="pt-2 space-y-2.5 border-t border-slate-100">
+            {/* Water Wash Event Checkbox */}
+            <div className="flex items-center gap-2">
+              <input
+                id="input-is-ww"
+                type="checkbox"
+                checked={isWaterWashEvent}
+                onChange={(e) => setIsWaterWashEvent(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+              />
+              <label htmlFor="input-is-ww" className="text-xs font-medium text-slate-700 cursor-pointer">
+                Water Wash performed on this date
+              </label>
+            </div>
+
+            {/* Baseline Reference Checkbox */}
+            <div className="flex items-start gap-2">
+              <input
+                id="input-is-baseline"
+                type="checkbox"
+                checked={setAsBaseline}
+                onChange={(e) => setSetAsBaseline(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 mt-0.5"
+              />
+              <div>
+                <label htmlFor="input-is-baseline" className="text-xs font-semibold text-slate-800 cursor-pointer">
+                  Set this reading as Baseline Reference (Clean condition)
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  {baseline.isConfigured
+                    ? 'Check if this reading represents a newly calibrated clean condition post-wash or overhaul.'
+                    : 'Recommended for your first real reading: Future readings will calculate deterioration % against this baseline.'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Submit Button */}

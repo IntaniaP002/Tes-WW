@@ -26,11 +26,11 @@ import {
 import { sendRecordToSpreadsheet } from './utils/spreadsheetSync';
 
 const STORAGE_KEYS = {
-  RECORDS: 'gt_ww_records_v2',
-  BASELINE: 'gt_ww_baseline_v2',
-  THRESHOLDS: 'gt_ww_thresholds_v2',
-  SPREADSHEET: 'gt_ww_spreadsheet_v2',
-  ACTIVE_TAB: 'gt_ww_active_tab_v2',
+  RECORDS: 'gt_ww_records_v3',
+  BASELINE: 'gt_ww_baseline_v3',
+  THRESHOLDS: 'gt_ww_thresholds_v3',
+  SPREADSHEET: 'gt_ww_spreadsheet_v3',
+  ACTIVE_TAB: 'gt_ww_active_tab_v3',
 };
 
 export default function App() {
@@ -56,7 +56,7 @@ export default function App() {
     return DEFAULT_THRESHOLDS;
   });
 
-  // Baseline State
+  // Baseline State - starts unconfigured if no saved baseline
   const [baseline, setBaseline] = useState<BaselineConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.BASELINE);
     if (saved) {
@@ -82,21 +82,18 @@ export default function App() {
     return DEFAULT_SPREADSHEET_CONFIG;
   });
 
-  // Records State
+  // Records State - starts completely EMPTY by default for real operator data
   const [records, setRecords] = useState<OperationalRecord[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.RECORDS);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch {
         /* fallback */
       }
     }
-    // Initialize with Reference Historical Dataset so the application is immediately verifiable
-    return REFERENCE_HISTORICAL_DATASET.map((input, idx) =>
-      evaluateOperationalRecord(input, `ref-${idx + 1}`, DEFAULT_BASELINE, DEFAULT_THRESHOLDS)
-    );
+    return [];
   });
 
   // Modals State
@@ -136,9 +133,31 @@ export default function App() {
   }, [records]);
 
   // Record Submission Handler
-  const handleRecordSubmitted = async (input: OperationalInput): Promise<{ success: boolean; message: string }> => {
+  const handleRecordSubmitted = async (
+    input: OperationalInput,
+    setAsBaseline?: boolean
+  ): Promise<{ success: boolean; message: string }> => {
+    let activeBaseline = baseline;
+
+    // Automatically configure or update baseline if requested or if none exists
+    if (setAsBaseline || !baseline.isConfigured) {
+      const pr = input.P1_7 > 0 ? Number((input.P3_0 / input.P1_7).toFixed(4)) : null;
+      activeBaseline = {
+        isConfigured: true,
+        T1_7: input.T1_7,
+        P1_7: input.P1_7,
+        P3_0: input.P3_0,
+        PR: pr,
+        realPower: input.realPower,
+        nphr: input.nphr,
+        referenceDescription: `Operational baseline established on ${input.date}`,
+        setAt: new Date().toISOString(),
+      };
+      setBaseline(activeBaseline);
+    }
+
     const newId = `rec-${Date.now()}`;
-    const evaluated = evaluateOperationalRecord(input, newId, baseline, thresholds);
+    const evaluated = evaluateOperationalRecord(input, newId, activeBaseline, thresholds);
 
     const updated = [...records, evaluated];
     setRecords(updated);
@@ -150,7 +169,37 @@ export default function App() {
       });
     }
 
-    return { success: true, message: 'Data successfully recorded and evaluated.' };
+    return { success: true, message: 'Data successfully recorded and saved.' };
+  };
+
+  // Clear all data handler
+  const handleClearData = () => {
+    if (window.confirm('Are you sure you want to clear all data and start completely fresh?')) {
+      setRecords([]);
+      setBaseline(DEFAULT_BASELINE);
+      localStorage.removeItem(STORAGE_KEYS.RECORDS);
+      localStorage.removeItem(STORAGE_KEYS.BASELINE);
+    }
+  };
+
+  // Load sample demo data handler
+  const handleLoadSampleData = () => {
+    const sampleBaseline: BaselineConfig = {
+      isConfigured: true,
+      T1_7: 68.0,
+      P1_7: 14.65,
+      P3_0: 245.0,
+      PR: 16.7235,
+      realPower: 156.0,
+      nphr: 2420.0,
+      referenceDescription: 'Clean condition baseline reference',
+      setAt: '2024-01-01T08:00:00Z',
+    };
+    setBaseline(sampleBaseline);
+    const evaluated = REFERENCE_HISTORICAL_DATASET.map((input, idx) =>
+      evaluateOperationalRecord(input, `ref-${idx + 1}`, sampleBaseline, thresholds)
+    );
+    setRecords(evaluated);
   };
 
   // Import dataset handler
@@ -185,17 +234,6 @@ export default function App() {
     setActiveTab('dashboard');
   };
 
-  // Load Reference Case handler
-  const handleLoadReferenceCase = () => {
-    const evaluated = REFERENCE_HISTORICAL_DATASET.map((input, idx) =>
-      evaluateOperationalRecord(input, `ref-${idx + 1}`, DEFAULT_BASELINE, DEFAULT_THRESHOLDS)
-    );
-    setBaseline(DEFAULT_BASELINE);
-    setThresholds(DEFAULT_THRESHOLDS);
-    setRecords(evaluated);
-    setActiveTab('dashboard');
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans antialiased">
       {/* Top Application Header */}
@@ -203,6 +241,9 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         latestRecord={latestRecord ?? undefined}
+        recordsCount={records.length}
+        onClearData={handleClearData}
+        onLoadSampleData={handleLoadSampleData}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenSpreadsheetConfig={() => setIsSpreadsheetModalOpen(true)}
       />
@@ -252,7 +293,7 @@ export default function App() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImportData={handleImportData}
-        onLoadReferenceCase={handleLoadReferenceCase}
+        onLoadReferenceCase={handleLoadSampleData}
       />
 
       {/* Engineering Footer */}

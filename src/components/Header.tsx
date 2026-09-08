@@ -5,6 +5,8 @@ import {
   TrendingUp,
   FileSpreadsheet,
   Upload,
+  Trash2,
+  Sparkles,
 } from 'lucide-react';
 import { ActiveNavTab, OperationalRecord, OverallWaterWashStatus } from '../types';
 
@@ -14,6 +16,9 @@ interface HeaderProps {
   latestRecord?: OperationalRecord;
   onOpenImport: () => void;
   onOpenSpreadsheetConfig?: () => void;
+  recordsCount: number;
+  onClearData: () => void;
+  onLoadSampleData: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +27,9 @@ export const Header: React.FC<HeaderProps> = ({
   latestRecord,
   onOpenImport,
   onOpenSpreadsheetConfig,
+  recordsCount,
+  onClearData,
+  onLoadSampleData,
 }) => {
   const getStatusBadge = (status?: OverallWaterWashStatus) => {
     switch (status) {
@@ -94,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Status Badge and Actions */}
-        <div className="flex items-center gap-3 self-end md:self-center">
+        <div className="flex items-center gap-2.5 flex-wrap self-end md:self-center">
           {getStatusBadge(latestRecord?.overallStatus)}
 
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
@@ -109,6 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden sm:inline">Google Sheets</span>
               </button>
             )}
+
             <button
               type="button"
               onClick={onOpenImport}
@@ -116,8 +125,30 @@ export const Header: React.FC<HeaderProps> = ({
               title="Import Dataset"
             >
               <Upload className="w-3.5 h-3.5 text-slate-500" />
-              <span>Import Dataset</span>
+              <span className="hidden sm:inline">Import</span>
             </button>
+
+            {recordsCount > 0 ? (
+              <button
+                type="button"
+                onClick={onClearData}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded hover:bg-rose-100 transition-colors shadow-xs"
+                title="Clear all data and start fresh"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                <span>Clear Data</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onLoadSampleData}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors shadow-xs"
+                title="Load sample dataset for demo purposes"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Demo Data</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
